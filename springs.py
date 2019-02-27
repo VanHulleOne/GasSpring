@@ -79,7 +79,7 @@ def filterer(spring, *, units=IMP,
     for key, value in locals().items():
         if value is not None:
             if key in options:
-                if getattr(spring, key) not in value:
+                if getattr(spring, key) != value:
                     return False
             elif key in offsets:
                 springValue = spring[offsets[key]+units]
@@ -112,7 +112,8 @@ def getSprings(*,
                                                                 solidLength=[0, length2],
                                                                 length=[length1, INF],
                                                                 rate=[(1-tol)*rate, (1+tol)*rate],
-                                                                material=material
+                                                                material=material,
+                                                                ends=ends
                                                                 )]
     print('Num filtered:', len(filteredSprings))
     doubleFilter = []
@@ -159,7 +160,7 @@ def fatigueLimit(spring, l1, l2, units=IMP):
 #print('NumSprings', len(stripSprings))
 
 retSprings = getSprings(ID=[0.403, INF], OD=[0, 0.58], length1=0.531, length2=0.374,
-                       force1=0.7, force2=1.0, material='SST', ends='CG', tol=0.15)
+                       force1=0.7, force2=1.0, material='SST', ends='CG', tol=0.25)
 print('NumSprings', len(retSprings))
 
 
