@@ -83,11 +83,12 @@ def filterer(spring, *, units=IMP,
                     return False
             elif key in offsets:
                 springValue = spring[offsets[key]+units]
-                if value[MIN] > springValue < value[MAX]:
+                if springValue < value[MIN] or springValue > value[MAX]:#value[MIN] > springValue > value[MAX]:
                     return False
             elif key == 'totalCoils':
-                if value[MIN] > spring.totalCoils < value[MAX]:
-                    return False
+                raise Exception('Total Coils not implimented')
+#                if value[MIN] > spring.totalCoils > value[MAX]:
+#                    return False
     return True
 
 #print(filterer(springs[0], OD=(0, 0.04)))
