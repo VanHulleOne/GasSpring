@@ -114,6 +114,7 @@ def getSprings(*,
                                                                 rate=[(1-tol)*rate, (1+tol)*rate],
                                                                 material=material
                                                                 )]
+    print('Num filtered:', len(filteredSprings))
     doubleFilter = []
     for spring in filteredSprings:
         rateAct = spring[offsets['rate']+units]
@@ -122,6 +123,7 @@ def getSprings(*,
         if (1-tol)*force1 < f1Act < (1+tol)*force1:
             doubleFilter.append(spring)
             
+    print('Num double:', len(doubleFilter))
     fatigueFiltered = [s for s in doubleFilter if fatigueLimit(s, length1, length2)[0]]
             
     return fatigueFiltered
@@ -150,10 +152,15 @@ def fatigueLimit(spring, l1, l2, units=IMP):
         return True, R1, R2
     return False, R1, R2
 
-fs = getSprings(ID=[0.4,0.6], length1=2, length2=1, force1=2, force2=10, material='SST', ends='CG')
+#fs = getSprings(ID=[0.4,0.6], length1=2, length2=1, force1=2, force2=10, material='SST', ends='CG')
     
-    
+#stripSprings = getSprings(ID=[0.323, INF], OD=[0, 0.49], length1=2.046, length2=1.862,
+#                          force1=4, force2=8, material='SST', ends='CG', tol=0.3)
+#print('NumSprings', len(stripSprings))
 
+retSprings = getSprings(ID=[0.403, INF], OD=[0, 0.58], length1=0.531, length2=0.374,
+                       force1=0.7, force2=1.0, material='SST', ends='CG', tol=0.15)
+print('NumSprings', len(retSprings))
 
 
 
