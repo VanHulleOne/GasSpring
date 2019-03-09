@@ -19,8 +19,8 @@ MAX = 1
 INF = float('inf')
 #                 Min Tens Mod of Elasticity
 #                   (psi)
-matProperties = {'MW': (280000, 11500000), # MW
-                 'SST':(210000, 10000000)} # SST
+matProperties = {'MW': (280_000, 11_500_000), # MW
+                 'SST':(210_000, 10_000_000)} # SST
 
 offsets = {'OD':0, 'length':3, 'ID':5, 'rate':7, 'deflection':9, 'load':11,
            'solidLength':13, 'wireDia':15} # offsets to switch between units
