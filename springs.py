@@ -10,6 +10,13 @@ springs.py
 from collections import namedtuple as nt
 from math import pi
 
+from pint import UnitRegistry
+
+ureg = UnitRegistry()
+
+spring_rate = ureg('N/mm')
+imp_spring_rate = ureg('lbf/in')
+
 COMP_FILE = 'CS Comp cat.txt'
 SPRING_FILE = 'CSCompSprings.txt'
 IMP = 0
@@ -27,29 +34,49 @@ offsets = {'OD':0, 'length':3, 'ID':5, 'rate':7, 'deflection':9, 'load':11,
 options = ['material', 'ends', 'finish']
 
 Spring = nt('Spring',
-            'OD_Imp \
-            OD_Metric \
-            num \
-            length_Imp \
-            length_Metric \
-            ID_Imp \
-            ID_Metric \
-            rate_Imp \
-            rate_Metric \
-            deflection_Imp \
-            deflection_Metric \
-            load_Imp \
-            load_Metric \
-            solidLength_Imp \
-            solidLength_Metric \
-            wireDia_Imp \
-            wireDia_Metric \
-            totalCoils \
-            material \
-            ends \
-            finish')
+        0    'OD_Imp \
+        1    OD_Metric \
+        2    num \
+        3    length_Imp \
+        4    length_Metric \
+        5    ID_Imp \
+        6    ID_Metric \
+        7    rate_Imp \
+        8    rate_Metric \
+        9    deflection_Imp \
+       10    deflection_Metric \
+       11    load_Imp \
+       12    load_Metric \
+       13    solidLength_Imp \
+       14    solidLength_Metric \
+       15    wireDia_Imp \
+       16    wireDia_Metric \
+       17    totalCoils \
+       18    material \
+       19    ends \
+       20    finish')
 
 springs = []
+
+percMinTens = {'MW':0.45, 'HD':0.40, 'OT':0.45, 'SST':0.30, '17-7':0.45}
+
+class Spring():
+    def __init__(self, catRow):
+        self.name = catRow[2]
+        self.OD = float(catRow[1]) * ureg.mm
+        self.length = float(catRow[4]) * ureg.mm
+        self.wireDia = float(catRow[16]) * ureg.mm
+        self.rate = float(catRow[8]) * spring_rate
+        self.numCoils = int(catRow[17])
+        self.material = catRow[18]
+        self.ends = catRow[19]
+    
+    def getStress(self, deflection):
+        D = self.OD - self.wireDia
+        C = D/self.wireDia
+        K = (4*C-1)/(4*C-4) + 0.615/C
+        stress = 8*self.rate*D*K*deflection/(PI*self.wireDia**3)
+        return stress
 
 with open(SPRING_FILE, 'r') as f:
     for line in f:
