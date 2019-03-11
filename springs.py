@@ -8,9 +8,12 @@ springs.py
 """
 
 from collections import namedtuple as nt
+import bisect
 from math import pi
 
 from pint import UnitRegistry
+
+from tensileStrength import tensileStrengths
 
 ureg = UnitRegistry()
 
@@ -24,6 +27,14 @@ METRIC = 1
 MIN = 0
 MAX = 1
 INF = float('inf')
+
+NOT_POSSIBLE = -1
+NOT_RECOMMENDED = 0
+L_10e6 = 1
+L_MILLION = 2
+L_INF = 3
+
+
 #                 Min Tens Mod of Elasticity
 #                   (psi)
 matProperties = {'MW': (280_000, 11_500_000), # MW
@@ -58,15 +69,17 @@ Spring = nt('Spring',
 
 springs = []
 
-percMinTens = {'MW':0.45, 'HD':0.40, 'OT':0.45, 'SST':0.30, '17-7':0.45}
+strenghtReductionFactors = {'MW':0.45, 'HD':0.40, 'OT':0.45, 'SST':0.30, '17-7':0.45}
 
 class Spring():
     def __init__(self, catRow):
         self.name = catRow[2]
         self.OD = float(catRow[1]) * ureg.mm
-        self.length = float(catRow[4]) * ureg.mm
+        self.freeLength = float(catRow[4]) * ureg.mm
         self.wireDia = float(catRow[16]) * ureg.mm
         self.rate = float(catRow[8]) * spring_rate
+        self.maxDeflection = float(catRow[10]) * ureg.mm
+        self.solidLength = float(catRow[14]) * ureg.mm
         self.numCoils = int(catRow[17])
         self.material = catRow[18]
         self.ends = catRow[19]
@@ -77,6 +90,20 @@ class Spring():
         K = (4*C-1)/(4*C-4) + 0.615/C
         stress = 8*self.rate*D*K*deflection/(PI*self.wireDia**3)
         return stress
+    
+    def expectedLife(self, deflection):
+        if self.freeLength - self.solidLength > deflection:
+            return NOT_POSSIBLE
+        if deflection > self.maxDeflection:
+            return NOT_RECOMMENDED
+        
+        offset = bisect.bisect_right(tensileStrengths['WireDia'], self.wireDia)
+        minTens = tensileStrengths[self.material][offset]
+        reductionFactor = strenghtReductionFactors[self.material]
+        
+        stress = self.getStress(deflection)
+        
+        
 
 with open(SPRING_FILE, 'r') as f:
     for line in f:
