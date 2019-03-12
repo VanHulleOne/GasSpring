@@ -11,7 +11,8 @@ from collections import namedtuple as nt
 from math import pi
 
 COMP_FILE = 'CS Comp cat.txt'
-SPRING_FILE = 'CSCompSprings.txt'
+#SPRING_FILE = 'CSCompSprings.txt' 
+SPRING_FILE = 'correctedSpring.txt'
 IMP = 0
 METRIC = 1
 MIN = 0
@@ -54,6 +55,7 @@ springs = []
 with open(SPRING_FILE, 'r') as f:
     for line in f:
         temp = line.split(sep=' ')
+        temp = [s.strip() for s in temp]
         if len(temp) == 21:            
             springs.append(Spring(*([float(x) for x in temp[:2]] + 
                                      [temp[2]] +
