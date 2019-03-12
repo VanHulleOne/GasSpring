@@ -37,35 +37,35 @@ L_INF = 3
 
 #                 Min Tens Mod of Elasticity
 #                   (psi)
-matProperties = {'MW': (280_000, 11_500_000), # MW
-                 'SST':(210_000, 10_000_000)} # SST
+#matProperties = {'MW': (280_000, 11_500_000), # MW
+#                 'SST':(210_000, 10_000_000)} # SST
+#
+#offsets = {'OD':0, 'length':3, 'ID':5, 'rate':7, 'deflection':9, 'load':11,
+#           'solidLength':13, 'wireDia':15} # offsets to switch between units
+#options = ['material', 'ends', 'finish']
 
-offsets = {'OD':0, 'length':3, 'ID':5, 'rate':7, 'deflection':9, 'load':11,
-           'solidLength':13, 'wireDia':15} # offsets to switch between units
-options = ['material', 'ends', 'finish']
-
-Spring = nt('Spring',
-        0    'OD_Imp \
-        1    OD_Metric \
-        2    num \
-        3    length_Imp \
-        4    length_Metric \
-        5    ID_Imp \
-        6    ID_Metric \
-        7    rate_Imp \
-        8    rate_Metric \
-        9    deflection_Imp \
-       10    deflection_Metric \
-       11    load_Imp \
-       12    load_Metric \
-       13    solidLength_Imp \
-       14    solidLength_Metric \
-       15    wireDia_Imp \
-       16    wireDia_Metric \
-       17    totalCoils \
-       18    material \
-       19    ends \
-       20    finish')
+#Spring = nt('Spring',
+#        0    'OD_Imp \
+#        1    OD_Metric \
+#        2    num \
+#        3    length_Imp \
+#        4    length_Metric \
+#        5    ID_Imp \
+#        6    ID_Metric \
+#        7    rate_Imp \
+#        8    rate_Metric \
+#        9    deflection_Imp \
+#       10    deflection_Metric \
+#       11    load_Imp \
+#       12    load_Metric \
+#       13    solidLength_Imp \
+#       14    solidLength_Metric \
+#       15    wireDia_Imp \
+#       16    wireDia_Metric \
+#       17    totalCoils \
+#       18    material \
+#       19    ends \
+#       20    finish')
 
 springs = []
 
@@ -76,19 +76,30 @@ class Spring():
         self.name = catRow[2]
         self.OD = float(catRow[1]) * ureg.mm
         self.freeLength = float(catRow[4]) * ureg.mm
+        self.ID = float(catRow[6]) * ureg.mm
         self.wireDia = float(catRow[16]) * ureg.mm
         self.rate = float(catRow[8]) * spring_rate
         self.maxDeflection = float(catRow[10]) * ureg.mm
+        self.maxLoad = float(catRow[12]) * ureg.N
         self.solidLength = float(catRow[14]) * ureg.mm
-        self.numCoils = int(catRow[17])
+        self.numCoils = float(catRow[17])
         self.material = catRow[18]
         self.ends = catRow[19]
+        
+        self.checks()
+        
+    def checks(self):
+        if abs(self.OD - self.ID - 2*self.wireDia) > .1 * self.wireDia:
+            print(self.name, self.OD, self.ID, self.wireDia)
+        
+    def getForce(self, length):
+        return (self.freeLength - length) * self.rate
     
     def getStress(self, deflection):
         D = self.OD - self.wireDia
         C = D/self.wireDia
         K = (4*C-1)/(4*C-4) + 0.615/C
-        stress = 8*self.rate*D*K*deflection/(PI*self.wireDia**3)
+        stress = 8*self.rate*D*K*deflection/(pi*self.wireDia**3)
         return stress
     
     def expectedLife(self, deflection):
@@ -103,16 +114,19 @@ class Spring():
         
         stress = self.getStress(deflection)
         
+        if stress > minTens * reductionFactor:
+            return L_10e6
+        if stress > minTens * (reductionFactor + 0.1):
+            return L_MILLION
+        return L_INF
+        
         
 
 with open(SPRING_FILE, 'r') as f:
     for line in f:
         temp = line.split(sep=' ')
         if len(temp) == 21:            
-            springs.append(Spring(*([float(x) for x in temp[:2]] + 
-                                     [temp[2]] +
-                                     [float(x) for x in temp[3:18]] + 
-                                     temp[18:])))
+            springs.append(Spring(temp))
         else:
             print(temp)
 
@@ -213,9 +227,9 @@ def fatigueLimit(spring, l1, l2, units=IMP):
 #                          force1=4, force2=8, material='SST', ends='CG', tol=0.3)
 #print('NumSprings', len(stripSprings))
 
-retSprings = getSprings(ID=[0.403, INF], OD=[0, 0.58], length1=0.531, length2=0.374,
-                       force1=0.7, force2=1.0, material='SST', ends='CG', tol=0.25)
-print('NumSprings', len(retSprings))
+#retSprings = getSprings(ID=[0.403, INF], OD=[0, 0.58], length1=0.531, length2=0.374,
+#                       force1=0.7, force2=1.0, material='SST', ends='CG', tol=0.25)
+#print('NumSprings', len(retSprings))
 
 
 
