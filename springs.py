@@ -21,7 +21,9 @@ spring_rate = ureg('N/mm')
 imp_spring_rate = ureg('lbf/in')
 
 COMP_FILE = 'CS Comp cat.txt'
-SPRING_FILE = 'CSCompSprings.txt'
+#SPRING_FILE = 'CSCompSprings.txt'
+SPRING_FILE = 'correctedSpring.txt'
+
 IMP = 0
 METRIC = 1
 MIN = 0
@@ -74,14 +76,14 @@ strenghtReductionFactors = {'MW':0.45, 'HD':0.40, 'OT':0.45, 'SST':0.30, '17-7':
 class Spring():
     def __init__(self, catRow):
         self.name = catRow[2]
-        self.OD = float(catRow[1]) * ureg.mm
-        self.freeLength = float(catRow[4]) * ureg.mm
-        self.ID = float(catRow[6]) * ureg.mm
-        self.wireDia = float(catRow[16]) * ureg.mm
-        self.rate = float(catRow[8]) * spring_rate
-        self.maxDeflection = float(catRow[10]) * ureg.mm
-        self.maxLoad = float(catRow[12]) * ureg.N
-        self.solidLength = float(catRow[14]) * ureg.mm
+        self.OD = float(catRow[0]) * ureg.inch
+        self.freeLength = float(catRow[3]) * ureg.inch
+        self.ID = float(catRow[5]) * ureg.inch
+        self.wireDia = float(catRow[15]) * ureg.inch
+        self.rate = float(catRow[7]) * imp_spring_rate
+        self.maxDeflection = float(catRow[9]) * ureg.inch
+        self.maxLoad = float(catRow[11]) * ureg.lbf
+        self.solidLength = float(catRow[13]) * ureg.inch
         self.numCoils = float(catRow[17])
         self.material = catRow[18]
         self.ends = catRow[19]
