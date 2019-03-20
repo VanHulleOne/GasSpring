@@ -11,11 +11,11 @@ from collections import namedtuple as nt
 import bisect
 from math import pi
 
-from pint import UnitRegistry
+#from pint import UnitRegistry
 
-from tensileStrength import tensileStrengths
+from tensileStrength import tensileStrengths, ureg
 
-ureg = UnitRegistry()
+#ureg = UnitRegistry()
 
 spring_rate = ureg('N/mm')
 imp_spring_rate = ureg('lbf/in')
@@ -71,7 +71,13 @@ L_INF = 3
 
 springs = []
 
-strenghtReductionFactors = {'MW':0.45, 'HD':0.40, 'OT':0.45, 'SST':0.30, '17-7':0.45}
+strenghtReductionFactors = {'MW':0.45, 'SPR': 0.45, 'HD':0.40, 'OT':0.45,
+                            'SST':0.30, '17-7':0.45, 'BC':0.45, 'PB':0.40}
+elasticModuli = {'MW':11.5e6*ureg.psi, 'SPR': 11.5e6*ureg.psi, 'HD':11.5e6*ureg.psi,
+                 'OT':11.5e6*ureg.psi, 'SST':10e6*ureg.psi, '17-7':11e6*ureg.psi,
+                 'BC':18.5e6*ureg.psi, 'PB':15e6*ureg.psi,
+                 }
+activeCoilsDiff = {'O':0, 'OG':1, 'C':2, 'CG':2}
 
 class Spring():
     def __init__(self, catRow):
@@ -88,11 +94,28 @@ class Spring():
         self.material = catRow[18]
         self.ends = catRow[19]
         
+        if self.material == 'SPR':
+            self.material = 'HD'
+
+        self.activeCoils = self.numCoils - activeCoilsDiff[self.ends]
+        
+        self.possibleDataErrors = False        
         self.checks()
         
     def checks(self):
         if abs(self.OD - self.ID - 2*self.wireDia) > .1 * self.wireDia:
-            print(self.name, self.OD, self.ID, self.wireDia)
+#            print(self.name, self.OD, self.ID, self.wireDia)
+            self.possibleDataErrors = True
+        if abs(self.maxDeflection*self.rate - self.maxLoad) > .1 * self.maxLoad:
+            self.possibleDataErrors = True
+#            error = (self.maxDeflection*self.rate-self.maxLoad)/self.maxLoad
+#            print(self.name, self.maxDeflection, self.rate, self.maxLoad, error, sep=': ')
+            
+        calcRate = elasticModuli[self.material]*self.wireDia**4/(8*self.activeCoils*(self.OD-self.wireDia)**3)
+
+        if abs(calcRate-self.rate)/self.rate > 0.25:
+#            print(self.name, self.rate, calcRate, sep='\t')
+            self.possibleDataErrors = True
         
     def getForce(self, length):
         return (self.freeLength - length) * self.rate

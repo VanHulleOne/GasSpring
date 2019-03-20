@@ -24,10 +24,10 @@ with open('Wire Tensile Strengths.txt', 'r') as f:
         for header, l, c in zip(headers, line, columns):
             if header == headers[0]:
                 l = float(l)*ureg.inch
-                l.ito(ureg.mm)
+#                l.ito(ureg.mm)
             else:
                 l = float(l) * 1e3 * ureg.psi
-                l.ito(ureg.Pa)
+#                l.ito(ureg.Pa)
             c.append(l)
     for header, column in zip(headers, columns):
         tensileStrengths[header] = column
