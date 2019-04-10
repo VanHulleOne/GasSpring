@@ -146,7 +146,9 @@ class Spring():
         if stress > minTens * (reductionFactor + 0.1):
             return L_MILLION
         return L_INF
-        
+    
+    def __repr__(self):
+        return self.name
         
 
 with open(SPRING_FILE, 'r') as f:
@@ -184,6 +186,8 @@ def forceFilter(inSprings, lengths, forces, tolerances):
     for length, force, tol in zip(lengths, forces, tolerances):
         if length is None:
             continue
+        length=length*ureg.inch
+        force = force*ureg.lbf
         inSprings = [s for s in inSprings if (1-tol)*force <= s.getForce(length) <= (1+tol)*force]        
     print('After forceFilter:', len(inSprings))
     return inSprings
@@ -228,7 +232,7 @@ def getSprings2(thisSprings,*,
 
     return thisSprings
 
-s = getSprings2(springs, minOD=.1, maxOD=.11, length1=0.25)
+s = getSprings2(springs, maxOD=0.55, minID=0.4, length1=0.7, length2=0.38, force1=0.49, force2=1.7)
 
 print('Length:', len(s))
 
