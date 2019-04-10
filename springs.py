@@ -234,9 +234,12 @@ def getSprings2(thisSprings,*,
     targetForceSprings = forceFilter(thisSprings, [length1, length2], [force1, force2], [tolerance1, tolerance2])
     moreForceSprings = forceFilter(thisSprings, [length1, length2], [force1*forceFactor, force2*forceFactor], [tolerance1, tolerance2])
 
+#    results = getInformativeResults(lessForceSprings, targetForceSprings, moreForceSprings)
     return lessForceSprings, targetForceSprings, moreForceSprings
 
-s = getSprings2(springs, maxOD=0.55, minID=0.4, length1=0.7, length2=0.38, force1=0.49, force2=1.7, material='SST', tolerance1=0.4)
+s = getSprings2(springs, maxOD=0.55, minID=0.4, length1=0.7, length2=0.38,
+                force1=0.49, force2=1.7, material='SST', tolerance1=0.8, safeSolidLength=None)
+
 lengths = [len(x) for x in s]
 print('Lengths:', lengths)
 
