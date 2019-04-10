@@ -214,6 +214,7 @@ def getSprings2(thisSprings,*,
                 tolerance2=0.2,
                 numResults=INF,
                 minLife=L_INF,
+                forceFactor=2,
                 ):
     minMaxDict = {'OD':[minOD, maxOD],
                   'ID':[minID, maxID],
@@ -228,13 +229,16 @@ def getSprings2(thisSprings,*,
     thisSprings = optionsFilter(thisSprings, optionsDict)
     thisSprings = minMaxFilter(thisSprings, minMaxDict)
     thisSprings = lifeFilter(thisSprings, length1, length2, minLife)
-    thisSprings = forceFilter(thisSprings, [length1, length2], [force1, force2], [tolerance1, tolerance2])
+    
+    lessForceSprings = forceFilter(thisSprings, [length1, length2], [force1/forceFactor, force2/forceFactor], [tolerance1, tolerance2])
+    targetForceSprings = forceFilter(thisSprings, [length1, length2], [force1, force2], [tolerance1, tolerance2])
+    moreForceSprings = forceFilter(thisSprings, [length1, length2], [force1*forceFactor, force2*forceFactor], [tolerance1, tolerance2])
 
-    return thisSprings
+    return lessForceSprings, targetForceSprings, moreForceSprings
 
 s = getSprings2(springs, maxOD=0.55, minID=0.4, length1=0.7, length2=0.38, force1=0.49, force2=1.7)
-
-print('Length:', len(s))
+lengths = [len(x) for x in s]
+print('Lengths:', lengths)
 
 
 
