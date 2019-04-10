@@ -73,23 +73,23 @@ springs = []
 
 strenghtReductionFactors = {'MW':0.45, 'SPR': 0.45, 'HD':0.40, 'OT':0.45,
                             'SST':0.30, '17-7':0.45, 'BC':0.45, 'PB':0.40}
-elasticModuli = {'MW':11.5e6*ureg.psi, 'SPR': 11.5e6*ureg.psi, 'HD':11.5e6*ureg.psi,
-                 'OT':11.5e6*ureg.psi, 'SST':10e6*ureg.psi, '17-7':11e6*ureg.psi,
-                 'BC':18.5e6*ureg.psi, 'PB':15e6*ureg.psi,
+elasticModuli = {'MW':11.5e6, 'SPR': 11.5e6, 'HD':11.5e6,
+                 'OT':11.5e6, 'SST':10e6, '17-7':11e6,
+                 'BC':18.5e6, 'PB':15e6,
                  }
 activeCoilsDiff = {'O':0, 'OG':1, 'C':2, 'CG':2}
 
 class Spring():
     def __init__(self, catRow):
         self.name = catRow[2]
-        self.OD = float(catRow[0]) * ureg.inch
-        self.freeLength = float(catRow[3]) * ureg.inch
-        self.ID = float(catRow[5]) * ureg.inch
-        self.wireDia = float(catRow[15]) * ureg.inch
-        self.rate = float(catRow[7]) * imp_spring_rate
-        self.maxDeflection = float(catRow[9]) * ureg.inch
-        self.maxLoad = float(catRow[11]) * ureg.lbf
-        self.solidLength = float(catRow[13]) * ureg.inch
+        self.OD = float(catRow[0]) 
+        self.freeLength = float(catRow[3]) 
+        self.ID = float(catRow[5]) 
+        self.wireDia = float(catRow[15]) 
+        self.rate = float(catRow[7])
+        self.maxDeflection = float(catRow[9]) 
+        self.maxLoad = float(catRow[11]) 
+        self.solidLength = float(catRow[13]) 
         self.numCoils = float(catRow[17])
         self.material = catRow[18]
         self.ends = catRow[19]
@@ -163,7 +163,7 @@ def minMaxFilter(inSprings, minMaxDict):
     for key, values in minMaxDict.items():
         if values[0] == 0 and values[1] == INF:
             continue
-        inSprings = [spring for spring in inSprings if values[0] <= getattr(spring, key).magnitude <= values[1]]
+        inSprings = [spring for spring in inSprings if values[0] <= getattr(spring, key) <= values[1]]
     print('After minmaxFilter:', len(inSprings))
     return inSprings
 
@@ -178,7 +178,7 @@ def optionsFilter(inSprings, options):
 def lifeFilter(inSprings, length1, length2, minLife):
     values = sorted(l for l in [length1, length2] if l is not None)
     if values:
-        inSprings = [s for s in inSprings if s.expectedLife(values[0]*ureg.inch) >= minLife]
+        inSprings = [s for s in inSprings if s.expectedLife(values[0]) >= minLife]
     print('After lifeFilter:', len(inSprings))
     return inSprings
         
@@ -186,8 +186,8 @@ def forceFilter(inSprings, lengths, forces, tolerances):
     for length, force, tol in zip(lengths, forces, tolerances):
         if length is None:
             continue
-        length=length*ureg.inch
-        force = force*ureg.lbf
+        length=length
+        force = force
         inSprings = [s for s in inSprings if (1-tol)*force <= s.getForce(length) <= (1+tol)*force]        
     print('After forceFilter:', len(inSprings))
     return inSprings
