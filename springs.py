@@ -236,7 +236,7 @@ def getSprings2(thisSprings,*,
 
     return lessForceSprings, targetForceSprings, moreForceSprings
 
-s = getSprings2(springs, maxOD=0.55, minID=0.4, length1=0.7, length2=0.38, force1=0.49, force2=1.7)
+s = getSprings2(springs, maxOD=0.55, minID=0.4, length1=0.7, length2=0.38, force1=0.49, force2=1.7, material='SST', tolerance1=0.4)
 lengths = [len(x) for x in s]
 print('Lengths:', lengths)
 
