@@ -128,7 +128,8 @@ class Spring():
         stress = 8*self.rate*D*K*deflection/(pi*self.wireDia**3)
         return stress
     
-    def expectedLife(self, deflection):
+    def expectedLife(self, shortestLength):
+        deflection = self.freeLength - shortestLength
         if deflection > self.freeLength - self.solidLength:
             return NOT_POSSIBLE
         if deflection > self.maxDeflection:
