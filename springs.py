@@ -93,6 +93,7 @@ class Spring():
         self.numCoils = float(catRow[17])
         self.material = catRow[18]
         self.ends = catRow[19]
+        self.safeSolidLength = bool(self.freeLength - self.maxDeflection < 1.01*self.solidLength)
         
         if self.material == 'SPR':
             self.material = 'HD'
