@@ -121,12 +121,18 @@ class Spring():
     def getForce(self, length):
         return (self.freeLength - length) * self.rate
     
-    def getStress(self, deflection):
+    def getStress(self, shortestLength):
+        deflection = self.freeLength - shortestLength
         D = self.OD - self.wireDia
         C = D/self.wireDia
         K = (4*C-1)/(4*C-4) + 0.615/C
         stress = 8*self.rate*D*K*deflection/(pi*self.wireDia**3)
         return stress
+    
+    def getMinTensileStrength(self):
+        offset = bisect.bisect_right(tensileStrengths['WireDia'], self.wireDia)
+        minTens = tensileStrengths[self.material][offset]
+        return minTens
     
     def expectedLife(self, shortestLength):
         deflection = self.freeLength - shortestLength
@@ -139,11 +145,11 @@ class Spring():
         minTens = tensileStrengths[self.material][offset]
         reductionFactor = strenghtReductionFactors[self.material]
         
-        stress = self.getStress(deflection)
+        stress = self.getStress(shortestLength)
         
         if stress > minTens * reductionFactor:
             return L_10e6
-        if stress > minTens * (reductionFactor + 0.1):
+        if stress > minTens * (reductionFactor - 0.1):
             return L_MILLION
         return L_INF
     
