@@ -128,7 +128,7 @@ class Spring():
         return stress
     
     def expectedLife(self, deflection):
-        if self.freeLength - self.solidLength > deflection:
+        if deflection > self.freeLength - self.solidLength:
             return NOT_POSSIBLE
         if deflection > self.maxDeflection:
             return NOT_RECOMMENDED
@@ -154,6 +154,39 @@ with open(SPRING_FILE, 'r') as f:
             springs.append(Spring(temp))
         else:
             print(temp)
+
+def minMaxFilter(inSprings, minMaxDict):
+    for key, values in minMaxDict.items():
+        if values[0] == 0 and values[1] == INF:
+            continue
+        inSprings = [spring for spring in inSprings if values[0] <= getattr(spring, key).magnitude <= values[1]]
+    return inSprings
+        
+            
+def getSprings2(thisSprings,*,
+                minOD=0,
+                maxOD=INF,
+                minID=0,
+                maxID=INF,
+                minFreeLength=0,
+                maxFreeLength=INF,
+                length1=None,
+                length2=None,
+                force1=None,
+                force2=None,
+                safeSolidLength=False, # If the max deflection is at the solid length the spring can't be wrecked by over compression
+                material=None,
+                ends='CG',
+                finish=None,
+                tolerance=0.2,
+                numResults=INF
+                ):
+    minMaxDict = {'OD':[minOD, maxOD],
+                  'ID':[minID, maxID],
+                  'freeLength':[minFreeLength, maxFreeLength]}
+    thisSprings = minMaxFilter(thisSprings, minMaxDict)
+    return thisSprings
+    
 
 def filterer(spring, *, units=IMP,
              OD=None,
@@ -258,7 +291,9 @@ def fatigueLimit(spring, l1, l2, units=IMP):
 
 
 
+s = getSprings2(springs, minOD=.1, maxOD=.11)
 
+print('Length:', len(s))
 
 
 
