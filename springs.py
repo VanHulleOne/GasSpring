@@ -121,8 +121,8 @@ class Spring():
     def getForce(self, length):
         return (self.freeLength - length) * self.rate
     
-    def getStress(self, shortestLength):
-        deflection = self.freeLength - shortestLength
+    def getStress(self, length):
+        deflection = self.freeLength - length
         D = self.OD - self.wireDia
         C = D/self.wireDia
         K = (4*C-1)/(4*C-4) + 0.615/C
