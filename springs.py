@@ -125,7 +125,7 @@ class Spring():
         deflection = self.freeLength - length
         D = self.OD - self.wireDia
         C = D/self.wireDia
-        K = (4*C-1)/(4*C-4) + 0.615/C
+        K = (4*C-1)/(4*C-4) + 0.615/C # Wahl stress correction factor: Table 5.2 Pg 190
         stress = 8*self.rate*D*K*deflection/(pi*self.wireDia**3)
         return stress
     
