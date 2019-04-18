@@ -121,8 +121,9 @@ class Spring():
     def getForce(self, length):
         return (self.freeLength - length) * self.rate
     
-    def getStress(self, length):
-        deflection = self.freeLength - length
+    def getStress(self, length=None, deflection = None):
+        if deflection is None:
+            deflection = self.freeLength - length
         D = self.OD - self.wireDia
         C = D/self.wireDia
         K = (4*C-1)/(4*C-4) + 0.615/C # Wahl stress correction factor: Table 5.2 Pg 190
@@ -134,7 +135,7 @@ class Spring():
         minTens = tensileStrengths[self.material][offset]
         return minTens
     
-    def _getMillionDefl(self):
+    def getMillionDefl(self):
         minTens = self.getMinTensileStrength()
         reductionFactor = strenghtReductionFactors[self.material]
         
@@ -146,13 +147,16 @@ class Spring():
         
         return pi*self.wireDia**3*stress/(8*self.rate*D*K)
         
-    def _getnCycles(self):
-        deflection = self._getMillionDefl()
+    def getnCycles(self, deflection = None):
+        if deflection is None:
+            deflection = self._getMillionDefl()
+
+        stress = self.getStress(deflection = deflection)
         minTens = self.getMinTensileStrength()
         reductionFactor = strenghtReductionFactors[self.material]
         
         K_s1 = 0
-        K_s2 = self.getStress(self.freeLength-deflection)/minTens
+        K_s2 = stress/minTens
         
         K_U = 0.56
         C_S = 0.5546
