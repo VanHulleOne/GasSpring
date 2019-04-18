@@ -145,10 +145,10 @@ class Spring():
         minTens = tensileStrengths[self.material][offset]
         reductionFactor = strenghtReductionFactors[self.material]
         
-        stress = self.getStress(shortestLength)
+        stress = self.getStress(length)
         
         if stress > minTens * reductionFactor:
-            return L_10e6
+            return L_10e5
         if stress > minTens * (reductionFactor - 0.1):
             return L_MILLION
         return L_INF
