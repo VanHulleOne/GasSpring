@@ -32,7 +32,7 @@ INF = float('inf')
 
 NOT_POSSIBLE = -1
 NOT_RECOMMENDED = 0
-L_10e6 = 1
+L_10e5 = 1
 L_MILLION = 2
 L_INF = 3
 
