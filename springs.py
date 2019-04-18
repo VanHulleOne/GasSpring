@@ -148,6 +148,13 @@ class Spring():
         return pi*self.wireDia**3*stress/(8*self.rate*D*K)
         
     def getnCycles(self, deflection = None):
+        '''
+        This spring life calculation should be accurate for the life of plain carbon
+        springs when the number of cycles is between 5e5 and 1e7 [Stone]. Above 
+        2e6 these springs should experience near infinite life.
+        For stainless springs these values become less accurate.
+        
+        '''
         if deflection is None:
             deflection = self._getMillionDefl()
 
