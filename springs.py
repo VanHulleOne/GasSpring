@@ -130,12 +130,43 @@ class Spring():
         return stress
     
     def getMinTensileStrength(self):
-        offset = bisect.bisect_right(tensileStrengths['WireDia'], self.wireDia)
+        offset = bisect.bisect_right(tensileStrengths['WireDia'], self.wireDia-.0001)
         minTens = tensileStrengths[self.material][offset]
         return minTens
     
-    def expectedLife(self, shortestLength):
-        deflection = self.freeLength - shortestLength
+    def _getMillionDefl(self):
+        minTens = self.getMinTensileStrength()
+        reductionFactor = strenghtReductionFactors[self.material]
+        
+        stress = minTens * reductionFactor
+        
+        D = self.OD - self.wireDia
+        C = D/self.wireDia
+        K = (4*C-1)/(4*C-4) + 0.615/C # Wahl stress correction factor: Table 5.2 Pg 190
+        
+        return pi*self.wireDia**3*stress/(8*self.rate*D*K)
+        
+    def _getnCycles(self):
+        deflection = self._getMillionDefl()
+        minTens = self.getMinTensileStrength()
+        reductionFactor = strenghtReductionFactors[self.material]
+        
+        K_s1 = 0
+        K_s2 = self.getStress(self.freeLength-deflection)/minTens
+        
+        K_U = 0.56
+        C_S = 0.5546
+        M = -0.009
+        C_E = 0.662
+        Y = -0.0622
+        
+        K_E = K_U*(K_s2 - K_s1)/(2*K_U - (K_s2+K_s1))
+                
+        n = (C_E/K_E)**(1/-Y)
+        return n
+    
+    def expectedLife(self, length):
+        deflection = self.freeLength - length
         if deflection > self.freeLength - self.solidLength:
             return NOT_POSSIBLE
         if deflection > self.maxDeflection:
