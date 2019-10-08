@@ -69,7 +69,7 @@ L_INF = 3
 #       19    ends \
 #       20    finish')
 
-springs = []
+allSprings = []
 
 strenghtReductionFactors = {'MW':0.45, 'SPR': 0.45, 'HD':0.40, 'OT':0.45,
                             'SST':0.30, '17-7':0.45, 'BC':0.45, 'PB':0.40}
@@ -161,7 +161,7 @@ with open(SPRING_FILE, 'r') as f:
     for line in f:
         temp = line.split(sep=' ')
         if len(temp) == 21:            
-            springs.append(Spring(temp))
+            allSprings.append(Spring(temp))
         else:
             print(temp)
 
@@ -170,7 +170,7 @@ def minMaxFilter(inSprings, minMaxDict):
         if values[0] == 0 and values[1] == INF:
             continue
         inSprings = [spring for spring in inSprings if values[0] <= getattr(spring, key) <= values[1]]
-    print('After minmaxFilter:', len(inSprings))
+#    print('After minmaxFilter:', len(inSprings))
     return inSprings
 
 def optionsFilter(inSprings, options):
@@ -178,14 +178,14 @@ def optionsFilter(inSprings, options):
         if value is None:
             continue
         inSprings = [spring for spring in inSprings if getattr(spring, key) == value]
-    print('After optionsFilter:', len(inSprings))
+#    print('After optionsFilter:', len(inSprings))
     return inSprings
 
 def lifeFilter(inSprings, length1, length2, minLife):
     values = sorted(l for l in [length1, length2] if l is not None)
     if values:
         inSprings = [s for s in inSprings if s.expectedLife(values[0]) >= minLife]
-    print('After lifeFilter:', len(inSprings))
+#    print('After lifeFilter:', len(inSprings))
     return inSprings
         
 def forceFilter(inSprings, lengths, forces, tolerances):
@@ -195,7 +195,7 @@ def forceFilter(inSprings, lengths, forces, tolerances):
         length=length
         force = force
         inSprings = [s for s in inSprings if (1-tol)*force <= s.getForce(length) <= (1+tol)*force]        
-    print('After forceFilter:', len(inSprings))
+#    print('After forceFilter:', len(inSprings))
     return inSprings
     
 def forceFilter2(inSprings, lengths, forces1, forces2):
@@ -284,6 +284,7 @@ def getSprings3(thisSprings,*,
                 forces2=None,
                 safeSolidLength=None, # If the max deflection is at the solid length the spring can't be wrecked by over compression
                 solidLengthBuffer=0,
+                shimThickness=0,
                 material=None,
                 ends='CG',
                 finish=None,
@@ -308,23 +309,75 @@ def getSprings3(thisSprings,*,
     
     thisSprings = forceFilter2(thisSprings, [length1, length2], forces1, forces2)
     
-    if len(thisSprings) < numResults:
-        printSummary(thisSprings, length1, length2)
+#    if len(thisSprings) < numResults:
+#        printSummary(thisSprings, length1, length2)
         
     
     return thisSprings
 
-s = getSprings3(springs,
+length1 = 0.95
+length2 = 0.75
+
+s = getSprings3(allSprings,
                 minOD=0.4, maxOD=0.8,
-                length1 = 0.95, length2 = 0.75,
+                length1 = length1, length2 = length2,
                 forces1 = [4, 15], forces2 = [4,30],
                 safeSolidLength=True,
                 solidLengthBuffer=0.05,
+                shimThickness=0.1,
                 material='SST',
                 minLife=L_MILLION,
                 )
 
-print('Length s:', len(s))
+if len(s) < 15:
+    printSummary(s, length1, length2)
+else:
+    print('Length s:', len(s))
+
+print()
+
+def getOptions(springs, **kwargs):
+    intervals = [0.5, 0.75, 1.5, 2.0]
+    
+    L1 = kwargs['length1']
+    L2 = kwargs['length2']
+        
+    for spring in springs:
+        altSprings = []
+        
+        r = spring.name + '\t'
+        
+        
+        f1 = spring.getForce(L1)
+        f2 = spring.getForce(L2)        
+        
+        for shimThickness in (-kwargs['shimThickness'], 0, kwargs['shimThickness']):
+            r += 'st: ' + str(shimThickness) + ', '
+            intervalSprings = []
+            for interval in intervals:
+                kwargs['length1'] = L1 - shimThickness
+                kwargs['length2'] = L2 - shimThickness
+                kwargs['forces1'] = [f1*(interval-0.1), f1*(interval+0.1)]
+                kwargs['forces2'] = [f1*(interval-0.1), f2*(interval+0.25)]
+                intervalSprings.append(getSprings3(allSprings, **kwargs))
+                r += str(len(intervalSprings[-1])) + '-'
+            r = r[:-1] + '\t'
+            altSprings.append(intervalSprings)
+        print(r)
+#        print(spring.name, '-'.join(str(len(x)) for x in altSprings))
+
+getOptions(s, 
+            minOD=0.4, maxOD=0.8,
+            length1 = 0.95, length2 = 0.75,
+            forces1 = [4, 15], forces2 = [4,30],
+            safeSolidLength=True,
+            solidLengthBuffer=0.05,
+            shimThickness=0.1,
+            material='SST',
+            minLife=L_MILLION,
+            )            
+
+
 
 
 #def fatigueLimit(spring, l1, l2, units=IMP):
