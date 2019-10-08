@@ -198,7 +198,16 @@ def forceFilter(inSprings, lengths, forces, tolerances):
     print('After forceFilter:', len(inSprings))
     return inSprings
     
-
+def forceFilter2(inSprings, lengths, forces1, forces2):
+    outSprings = []
+    
+    for spring in inSprings:
+        actForces = [spring.getForce(length) for length in lengths]
+        if (forces1[0] <= actForces[0] <= forces1[1] and
+            forces2[0] <= actForces[1] <= forces2[1]):
+            outSprings.append(spring)
+    
+    return outSprings
         
             
 def getSprings2(thisSprings,*,
