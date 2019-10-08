@@ -242,15 +242,80 @@ def getSprings2(thisSprings,*,
 
 #    results = getInformativeResults(lessForceSprings, targetForceSprings, moreForceSprings)
     return lessForceSprings, targetForceSprings, moreForceSprings
+#
+#s = getSprings2(springs, maxOD=0.55, minID=0.4, length1=0.7, length2=0.38,
+#                force1=0.49, force2=1.7, material='SST', tolerance1=0.8, safeSolidLength=None)
+#
+#lengths = [len(x) for x in s]
+#print('Lengths:', lengths)
 
-s = getSprings2(springs, maxOD=0.55, minID=0.4, length1=0.7, length2=0.38,
-                force1=0.49, force2=1.7, material='SST', tolerance1=0.8, safeSolidLength=None)
 
-lengths = [len(x) for x in s]
-print('Lengths:', lengths)
+def printSummary(springs, length1, length2):
+    print('\t'.join('Name OD ID FreeLen Rate F1 F2'.split()))
+    for s in springs:
+        r = [s.name]
+        r.append(str(s.OD))
+        r.append(str(s.ID))
+        r.append(str(s.freeLength))
+        r.append(str(s.rate))
+        r.append('{:.2f}'.format(s.getForce(length1)))
+        r.append('{:.2f}'.format(s.getForce(length2)))
+        print('\t'.join(r))
 
+def getSprings3(thisSprings,*,
+                minOD=0,
+                maxOD=INF,
+                minID=0,
+                maxID=INF,
+                minFreeLength=0,
+                maxFreeLength=INF,
+                length1=None,
+                length2=None,
+                forces1=None,
+                forces2=None,
+                safeSolidLength=None, # If the max deflection is at the solid length the spring can't be wrecked by over compression
+                solidLengthBuffer=0,
+                material=None,
+                ends='CG',
+                finish=None,
+                numResults=15,
+                minLife=L_INF,
+                ):
+    minMaxDict = {'OD':[minOD, maxOD],
+                  'ID':[minID, maxID],
+                  'freeLength':[minFreeLength, maxFreeLength],
+                  }
+    optionsDict = {'material':material,
+                   'ends':ends,
+                   'finish': finish,
+                   'safeSolidLength':safeSolidLength,
+                   }
+    
+    thisSprings = optionsFilter(thisSprings, optionsDict)
+    thisSprings = minMaxFilter(thisSprings, minMaxDict)
+    thisSprings = lifeFilter(thisSprings, length1, length2, minLife)
+    
+    thisSprings = [s for s in thisSprings if s.solidLength < length1-solidLengthBuffer]
+    
+    thisSprings = forceFilter2(thisSprings, [length1, length2], forces1, forces2)
+    
+    if len(thisSprings) < numResults:
+        printSummary(thisSprings, length1, length2)
+        
+    
+    return thisSprings
 
+s = getSprings3(springs,
+                minOD=0.4, maxOD=0.8,
+                length1 = 0.95, length2 = 0.75,
+                forces1 = [4, 15], forces2 = [4,30],
+                safeSolidLength=True,
+                solidLengthBuffer=0.05,
+                material='SST',
+                minLife=L_MILLION,
+                )
 
+print('Length s:', len(s))
 
 
 #def fatigueLimit(spring, l1, l2, units=IMP):
