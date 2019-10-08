@@ -319,7 +319,7 @@ length1 = 0.95
 length2 = 0.75
 
 s = getSprings3(allSprings,
-                minOD=0.4, maxOD=0.8,
+                minOD=1.0, maxOD=1.5,
                 length1 = length1, length2 = length2,
                 forces1 = [4, 15], forces2 = [4,30],
                 safeSolidLength=True,
