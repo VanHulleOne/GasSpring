@@ -13,12 +13,12 @@ from math import pi
 
 #from pint import UnitRegistry
 
-from tensileStrength import tensileStrengths, ureg
+from tensileStrength import tensileStrengths#, #ureg
 
 #ureg = UnitRegistry()
 
-spring_rate = ureg('N/mm')
-imp_spring_rate = ureg('lbf/in')
+# spring_rate = ureg('N/mm')
+# imp_spring_rate = ureg('lbf/in')
 
 COMP_FILE = 'CS Comp cat.txt'
 #SPRING_FILE = 'CSCompSprings.txt'
@@ -36,43 +36,37 @@ L_10e5 = 1
 L_MILLION = 2
 L_INF = 3
 
+lifeDict = {'10^5': L_10e5,
+            '10^6': L_MILLION,
+            'Inf': L_INF,
+            }
 
-#                 Min Tens Mod of Elasticity
-#                   (psi)
-#matProperties = {'MW': (280_000, 11_500_000), # MW
-#                 'SST':(210_000, 10_000_000)} # SST
-#
-#offsets = {'OD':0, 'length':3, 'ID':5, 'rate':7, 'deflection':9, 'load':11,
-#           'solidLength':13, 'wireDia':15} # offsets to switch between units
-#options = ['material', 'ends', 'finish']
+GoodmanLine = nt('GoodmanLine', 'life y_intercept max_y x_at_max_y')
 
-#Spring = nt('Spring',
-#        0    'OD_Imp \
-#        1    OD_Metric \
-#        2    num \
-#        3    length_Imp \
-#        4    length_Metric \
-#        5    ID_Imp \
-#        6    ID_Metric \
-#        7    rate_Imp \
-#        8    rate_Metric \
-#        9    deflection_Imp \
-#       10    deflection_Metric \
-#       11    load_Imp \
-#       12    load_Metric \
-#       13    solidLength_Imp \
-#       14    solidLength_Metric \
-#       15    wireDia_Imp \
-#       16    wireDia_Metric \
-#       17    totalCoils \
-#       18    material \
-#       19    ends \
-#       20    finish')
+
+'''
+Goodman Graph data is estimated from SAE Spring Design Manual AE-21 1996, Fig. 5.1 (page 192)
+
+"Fig 5.1-Fatigue strength diagram for round wire helical compression springs which are not preset.
+All stresses are Wahl corrected with diagram representing a B-10 fatigue life.
+Diagram applicable to springs which are not preset and of the following materials:
+    Music Steel Spring Wire and Springs-SAE J178
+    Hard Drawn Carbon Vale Spring Quality Wiare and Springs-SAE J172
+    Oil Tempered Cabon Walve Spring Quality Wire and Springs-SAE J351
+    Oil Tempered Chromium-Vanadium Vale Spring Quality Wire and Springs-SAE J132"
+    
+'''
+goodmanLines = [GoodmanLine('10^5', .414, .500, .318),
+                GoodmanLine('10^6', .378, .491, .342),
+                GoodmanLine('10^7', .345, .480, .351),
+                ]
 
 springs = []
 
+# From Century Spring catalogue Appendix A, Material Properties of Common Spring Materials
 strenghtReductionFactors = {'MW':0.45, 'SPR': 0.45, 'HD':0.40, 'OT':0.45,
                             'SST':0.30, '17-7':0.45, 'BC':0.45, 'PB':0.40}
+
 elasticModuli = {'MW':11.5e6, 'SPR': 11.5e6, 'HD':11.5e6,
                  'OT':11.5e6, 'SST':10e6, '17-7':11e6,
                  'BC':18.5e6, 'PB':15e6,
@@ -94,6 +88,9 @@ class Spring():
         self.material = catRow[18]
         self.ends = catRow[19]
         self.safeSolidLength = bool(self.freeLength - self.maxDeflection < 1.01*self.solidLength)
+        self.minLength = self.freeLength - self.maxDeflection
+        
+        self.lastLength = self.freeLength
         
         if self.material == 'SPR':
             self.material = 'HD'
@@ -103,23 +100,67 @@ class Spring():
         self.possibleDataErrors = False        
         self.checks()
         
+        self.minTens = self.getMinTensileStrength()
+        self.reductionFactor = strenghtReductionFactors[self.material]
+        
+    def summary(self):
+        s = [self.name]
+        s.append('OD: ' + str(self.OD))
+        s.append('ID: ' + str(self.ID))
+        s.append('Free Length: ' + str(self.freeLength))
+        s.append('Rate: ' + str(self.rate))
+        
+        return '\t'.join(s)
+        
     def checks(self):
         if abs(self.OD - self.ID - 2*self.wireDia) > .1 * self.wireDia:
-#            print(self.name, self.OD, self.ID, self.wireDia)
             self.possibleDataErrors = True
         if abs(self.maxDeflection*self.rate - self.maxLoad) > .1 * self.maxLoad:
             self.possibleDataErrors = True
-#            error = (self.maxDeflection*self.rate-self.maxLoad)/self.maxLoad
-#            print(self.name, self.maxDeflection, self.rate, self.maxLoad, error, sep=': ')
             
         calcRate = elasticModuli[self.material]*self.wireDia**4/(8*self.activeCoils*(self.OD-self.wireDia)**3)
 
         if abs(calcRate-self.rate)/self.rate > 0.25:
-#            print(self.name, self.rate, calcRate, sep='\t')
             self.possibleDataErrors = True
         
     def getForce(self, length):
         return (self.freeLength - length) * self.rate
+    
+    def getDeflection(self, force):
+        deflection = force/self.rate
+        if deflection > self.maxDeflection:
+            return None 
+        return deflection
+    
+    def getMaxGoodman_Ks2(self, Ks1, goodmanLine):
+        x1 = 0
+        x2 = goodmanLine.x_at_max_y    
+        y1 = goodmanLine.y_intercept
+        y2 = goodmanLine.max_y
+        
+        y = (y2-y1)/(x2-x1)*(Ks1-x1)+y1
+        
+        return min(y, goodmanLine.max_y)
+        
+    
+    def getGoodmanLife(self, length1, length2=None):
+        if length2 is None:
+            length1, length2 = self.freeLength, length1
+        
+        minTens = self.getMinTensileStrength()
+        initStress = self.getStress(length1)
+        maxStress = self.getStress(length2)
+        
+        Ks1 = initStress/minTens
+        Ks2 = maxStress/minTens
+        
+        for goodmanLine in goodmanLines[::-1]:
+            maxKs2 = self.getMaxGoodman_Ks2(Ks1, goodmanLine)
+            if Ks2 < maxKs2:
+                print(self, goodmanLine.life)
+                return
+        print('Not much')
+        
     
     def getStress(self, length=None, deflection = None):
         if deflection is None:
@@ -131,15 +172,13 @@ class Spring():
         return stress
     
     def getMinTensileStrength(self):
-        offset = bisect.bisect_right(tensileStrengths['WireDia'], self.wireDia-.0001)
+        offset = bisect.bisect_right(tensileStrengths['WireDia'], self.wireDia,
+                                     hi=len(tensileStrengths['WireDia'])-1)
         minTens = tensileStrengths[self.material][offset]
         return minTens
     
     def getMillionDefl(self):
-        minTens = self.getMinTensileStrength()
-        reductionFactor = strenghtReductionFactors[self.material]
-        
-        stress = minTens * reductionFactor
+        stress = self.minTens * self.reductionFactor
         
         D = self.OD - self.wireDia
         C = D/self.wireDia
@@ -147,56 +186,75 @@ class Spring():
         
         return pi*self.wireDia**3*stress/(8*self.rate*D*K)
         
-    def getnCycles(self, deflection = None):
-        '''
-        This spring life calculation should be accurate for the life of plain carbon
-        springs when the number of cycles is between 5e5 and 1e7 [Stone]. Above 
-        2e6 these springs should experience near infinite life.
-        For stainless springs these values become less accurate.
+    # def getnCycles(self, deflection = None):
+    #     '''
+    #     This spring life calculation should be accurate for the life of plain carbon
+    #     springs when the number of cycles is between 5e5 and 1e7 [Stone]. Above 
+    #     2e6 these springs should experience near infinite life.
+    #     For stainless springs these values become less accurate.
         
-        '''
-        if deflection is None:
-            deflection = self._getMillionDefl()
+    #     '''
+    #     if deflection is None:
+    #         deflection = self._getMillionDefl()
 
-        stress = self.getStress(deflection = deflection)
-        minTens = self.getMinTensileStrength()
-        reductionFactor = strenghtReductionFactors[self.material]
+    #     stress = self.getStress(deflection = deflection)
+    #     minTens = self.getMinTensileStrength()
+    #     reductionFactor = strenghtReductionFactors[self.material]
         
-        K_s1 = 0
-        K_s2 = stress/minTens
+    #     K_s1 = 0
+    #     K_s2 = stress/minTens
         
-        K_U = 0.56
-        C_S = 0.5546
-        M = -0.009
-        C_E = 0.662
-        Y = -0.0622
+    #     K_U = 0.56
+    #     C_S = 0.5546
+    #     M = -0.009
+    #     C_E = 0.662
+    #     Y = -0.0622
         
-        K_E = K_U*(K_s2 - K_s1)/(2*K_U - (K_s2+K_s1))
+    #     K_E = K_U*(K_s2 - K_s1)/(2*K_U - (K_s2+K_s1))
                 
-        n = (C_E/K_E)**(1/-Y)
-        return n
-    
+    #     n = (C_E/K_E)**(1/-Y)
+    #     return n
+
+    def getLifeFOS(self, minLife):
+        if self.lastLength >= self.freeLength:
+            return '-'
+        
+        life = lifeDict[minLife]
+        
+        stress = self.getStress(self.lastLength)
+        factor = 10*(-stress/self.minTens + self.reductionFactor)
+        
+        if life == L_10e5:
+            if factor > 0:
+                return self.expectedLife(self.lastLength) - L_10e5 + factor
+            else:
+                millDeflection = self.getMillionDefl()
+                currDeflection = self.freeLength - self.lastLength
+                return millDeflection/currDeflection
+        
+        if life == L_MILLION:
+            return factor
+        return factor - 1
+
     def expectedLife(self, length):
+        self.lastLength = length
         deflection = self.freeLength - length
         if deflection > self.freeLength - self.solidLength:
             return NOT_POSSIBLE
         if deflection > self.maxDeflection:
             return NOT_RECOMMENDED
         
-        offset = bisect.bisect_right(tensileStrengths['WireDia'], self.wireDia)
-        minTens = tensileStrengths[self.material][offset]
-        reductionFactor = strenghtReductionFactors[self.material]
-        
         stress = self.getStress(length)
         
-        if stress > minTens * reductionFactor:
-            return L_10e5
-        if stress > minTens * (reductionFactor - 0.1):
+        if stress < self.minTens * (self.reductionFactor - 0.1):
+            return L_INF
+        if stress < self.minTens * self.reductionFactor:
             return L_MILLION
-        return L_INF
+        return L_10e5
     
     def __repr__(self):
-        return self.name
+        return 'Spring(' + self.name + ')'
+
         
 
 with open(SPRING_FILE, 'r') as f:
@@ -207,115 +265,57 @@ with open(SPRING_FILE, 'r') as f:
         else:
             print(temp)
 
-def minMaxFilter(inSprings, minMaxDict):
-    for key, values in minMaxDict.items():
-        if values[0] == 0 and values[1] == INF:
-            continue
-        inSprings = [spring for spring in inSprings if values[0] <= getattr(spring, key) <= values[1]]
-    print('After minmaxFilter:', len(inSprings))
-    return inSprings
+def getFourDeflections(spring, stroke, minF1, maxF1, minF2, maxF2):
+    d1 = spring.getDeflection(minF1)    
+    d2 = min(x for x in (spring.getDeflection(maxF1), spring.maxDeflection) if x is not None)     
+    d3 = spring.getDeflection(minF2)
+    d4 = min(x for x in (spring.getDeflection(maxF2), spring.maxDeflection) if x is not None)
+    
+    return d1, d2, d3, d4
 
-def optionsFilter(inSprings, options):
-    for key, value in options.items():
-        if value is None:
+def strokeFilter(inSprings, stroke, minF1, maxF1, minF2, maxF2):
+    outSprings = []
+    for s in inSprings:
+        d1, d2, d3, d4 = getFourDeflections(s, stroke, minF1, maxF1, minF2, maxF2)
+        if d1 is None or d3 is None:
             continue
-        inSprings = [spring for spring in inSprings if getattr(spring, key) == value]
-    print('After optionsFilter:', len(inSprings))
-    return inSprings
-
-def lifeFilter(inSprings, length1, length2, minLife):
-    values = sorted(l for l in [length1, length2] if l is not None)
-    if values:
-        inSprings = [s for s in inSprings if s.expectedLife(values[0]) >= minLife]
-    print('After lifeFilter:', len(inSprings))
-    return inSprings
         
-def forceFilter(inSprings, lengths, forces, tolerances):
-    for length, force, tol in zip(lengths, forces, tolerances):
-        if length is None:
-            continue
-        length=length
-        force = force
-        inSprings = [s for s in inSprings if (1-tol)*force <= s.getForce(length) <= (1+tol)*force]        
-    print('After forceFilter:', len(inSprings))
-    return inSprings
-    
+        minDeltaD = d3-d2
+        maxDeltaD = d4-d1
+        if minDeltaD < stroke and maxDeltaD > stroke:
+            outSprings.append(s)
+    return outSprings
 
-        
-            
-def getSprings2(thisSprings,*,
-                minOD=0,
-                maxOD=INF,
-                minID=0,
-                maxID=INF,
-                minFreeLength=0,
-                maxFreeLength=INF,
-                length1=None,
-                length2=None,
-                force1=None,
-                force2=None,
-                safeSolidLength=None, # If the max deflection is at the solid length the spring can't be wrecked by over compression
-                material=None,
-                ends='CG',
-                finish=None,
-                tolerance1=0.2,
-                tolerance2=0.2,
-                numResults=INF,
-                minLife=L_INF,
-                forceFactor=2,
-                ):
-    minMaxDict = {'OD':[minOD, maxOD],
-                  'ID':[minID, maxID],
-                  'freeLength':[minFreeLength, maxFreeLength],
-                  }
-    optionsDict = {'material':material,
-                   'ends':ends,
-                   'finish': finish,
-                   'safeSolidLength':safeSolidLength,
-                   }
-    
-    thisSprings = optionsFilter(thisSprings, optionsDict)
-    thisSprings = minMaxFilter(thisSprings, minMaxDict)
-    thisSprings = lifeFilter(thisSprings, length1, length2, minLife)
-    
-    lessForceSprings = forceFilter(thisSprings, [length1, length2], [force1/forceFactor, force2/forceFactor], [tolerance1, tolerance2])
-    targetForceSprings = forceFilter(thisSprings, [length1, length2], [force1, force2], [tolerance1, tolerance2])
-    moreForceSprings = forceFilter(thisSprings, [length1, length2], [force1*forceFactor, force2*forceFactor], [tolerance1, tolerance2])
+springDict = {s.name:s for s in springs}
 
-#    results = getInformativeResults(lessForceSprings, targetForceSprings, moreForceSprings)
-    return lessForceSprings, targetForceSprings, moreForceSprings
+def rangeAttrFilter(lsprings, attr, minN, maxN):
+    return [s for s in lsprings if minN <= s.__getattribute__(attr) <= maxN]
 
-s = getSprings2(springs, maxOD=0.55, minID=0.4, length1=0.7, length2=0.38,
-                force1=0.49, force2=1.7, material='SST', tolerance1=0.8, safeSolidLength=None)
+def lengthFilter(lsprings, length):
+    return [s for s in lsprings if s.minLength <= length <= s.freeLength]
 
-lengths = [len(x) for x in s]
-print('Lengths:', lengths)
+def forceFilter(lsprings, length, minF, maxF):
+    return [s for s in lsprings if minF <= s.getForce(length) <= maxF]
 
+def selectionFilter(lsprings, attr, value):
+    return [s for s in lsprings if s.__getattribute__(attr) == value]
 
-
-
-
-#def fatigueLimit(spring, l1, l2, units=IMP):
-#    _id = spring[offsets['ID']+units]
-#    wireDia = spring[offsets['wireDia']+units]
-#    tensileStrength = matProperties[spring.material][0]
-#    freeLength = spring[offsets['length']+units]
-#    rate = spring[offsets['rate']+units]
-#
-#    K = (4.0*_id/wireDia - 1)/(4.0*_id/wireDia - 4) + 0.615*wireDia/_id
-#    
-#    f1 = (freeLength - l1)*rate
-#    f2 = (freeLength - l2)*rate
-#    
-#    sig1 = 8*f1*_id*K/(pi*wireDia**3)
-#    sig2 = 8*f2*_id*K/(pi*wireDia**3)
-#    
-#    R1 = sig1/tensileStrength
-#    R2 = sig2/tensileStrength
-#    
-#    if R1 > 0.34 and R2 < 0.48:
-#        return True, R1, R2
-#    if R2 < (0.4*R1 + 0.34):
-#        return True, R1, R2
-#    return False, R1, R2
-
+def lifeFilter(inSprings, minLife, *, length1=None, length2=None, stroke=None, forces=None):
+    if stroke and forces:
+        outSprings = []
+        for spring in inSprings:
+            d1, d2, d3, d4 = getFourDeflections(spring, stroke, *forces)
+            if d1 + stroke > d3:
+                length1 = spring.freeLength - d1
+                length2 = spring.freeLength - (d1 + stroke)
+            else:
+                length2 = spring.freeLength - d3
+                length1 = length2 + stroke
+            if spring.expectedLife(length2) >= lifeDict[minLife]:
+                outSprings.append(spring)
+        return outSprings
+    try:
+        minLength = min(l for l in [length1, length2] if l is not None)
+        return [s for s in inSprings if s.expectedLife(minLength) >= lifeDict[minLife]]
+    except Exception:
+        return inSprings
