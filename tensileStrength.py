@@ -8,9 +8,6 @@ tensileStrength.py
 """
 
 import  csv
-from pint import UnitRegistry
-
-ureg = UnitRegistry()
 
 tensileStrengths = dict()
 
