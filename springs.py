@@ -226,15 +226,15 @@ class Spring():
         
         if life == L_10e5:
             if factor > 0:
-                return self.expectedLife(self.lastLength) - L_10e5 + factor
+                return 10**(factor+1)
             else:
                 millDeflection = self.getMillionDefl()
                 currDeflection = self.freeLength - self.lastLength
-                return millDeflection/currDeflection
+                return 10**(millDeflection/currDeflection)
         
         if life == L_MILLION:
-            return factor
-        return factor - 1
+            return 10**factor
+        return 10**(factor - 1)
 
     def expectedLife(self, length):
         self.lastLength = length

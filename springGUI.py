@@ -30,7 +30,7 @@ outputCols = [
               OutputNT('F@L2', lambda s: s.getForce(variableWidgets['Length 2'].value)),
               OutputNT('SSL', 'safeSolidLength'),
               OutputNT('Max Def', 'maxDeflection'),
-              OutputNT('log10(FOS)', lambda s: s.getLifeFOS(variableWidgets['Min Life'].value)),
+              OutputNT('FOS', lambda s: s.getLifeFOS(variableWidgets['Min Life'].value)),
               ]
 
 
