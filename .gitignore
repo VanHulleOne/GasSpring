@@ -1,1 +1,8 @@
 *.pyc
+*.html
+build/springGUI/warn-springGUI.txt
+*.toc
+build/springGUI/base_library.zip
+build/springGUI/PKG-00.pkg
+build/springGUI/PYZ-00.pyz
+build/springGUI/springGUI.exe.manifest
