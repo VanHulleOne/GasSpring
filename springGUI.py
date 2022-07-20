@@ -29,8 +29,8 @@ outputCols = [
               OutputNT('F@L1', lambda s: s.getForce(variableWidgets['Length 1'].value)),
               OutputNT('F@L2', lambda s: s.getForce(variableWidgets['Length 2'].value)),
               OutputNT('SSL', 'safeSolidLength'),
-              OutputNT('Max Def', 'maxDeflection'),
-              OutputNT('FOS', lambda s: s.getLifeFOS(variableWidgets['Min Life'].value)),
+              OutputNT('Max Defl', 'maxDeflection'),
+              OutputNT('log10(FOS)', lambda s: s.getLifeFOS(variableWidgets['Min Life'].value)),
               ]
 
 
@@ -492,7 +492,18 @@ def clamp(n, minn, maxn):
         return maxn
     return n
 
-        
+sp.loadSprings()       
 root = tk.Tk()
 selector = SpringSelector(root)
 root.mainloop()
+
+'''
+This was the command for pyinstaller that made the .exe
+
+CD into the python scripts folder
+
+pyinstaller --add-data 'correctedSpring.txt:.' --onefile --windowed springGUI.py
+
+, Wire Tensile Strengths.txt:.
+
+'''

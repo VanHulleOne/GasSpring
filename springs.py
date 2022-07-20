@@ -58,10 +58,11 @@ Diagram applicable to springs which are not preset and of the following material
 '''
 goodmanLines = [GoodmanLine('10^5', .414, .500, .318),
                 GoodmanLine('10^6', .378, .491, .342),
-                GoodmanLine('10^7', .345, .480, .351),
+                GoodmanLine('Inf', .345, .480, .351),
                 ]
 
 springs = []
+springDict = dict()
 
 # From Century Spring catalogue Appendix A, Material Properties of Common Spring Materials
 strenghtReductionFactors = {'MW':0.45, 'SPR': 0.45, 'HD':0.40, 'OT':0.45,
@@ -147,6 +148,13 @@ class Spring():
         if length2 is None:
             length1, length2 = self.freeLength, length1
         
+        deflection = self.freeLength - length2
+        
+        if deflection > self.freeLength - self.solidLength:
+            return NOT_POSSIBLE
+        if deflection > self.maxDeflection:
+            return NOT_RECOMMENDED
+        
         minTens = self.getMinTensileStrength()
         initStress = self.getStress(length1)
         maxStress = self.getStress(length2)
@@ -157,9 +165,9 @@ class Spring():
         for goodmanLine in goodmanLines[::-1]:
             maxKs2 = self.getMaxGoodman_Ks2(Ks1, goodmanLine)
             if Ks2 < maxKs2:
-                print(self, goodmanLine.life)
-                return
-        print('Not much')
+                # print(self, goodmanLine.life)
+                return lifeDict[goodmanLine.life]
+        return NOT_RECOMMENDED
         
     
     def getStress(self, length=None, deflection = None):
@@ -214,8 +222,13 @@ class Spring():
                 
     #     n = (C_E/K_E)**(1/-Y)
     #     return n
+    
+    def getLifeFOS(self, minLife, log10=True):
+        if log10:
+            return self._getLifeFOS(minLife)
+        return 10**self._getLifeFOS(minLife)
 
-    def getLifeFOS(self, minLife):
+    def _getLifeFOS(self, minLife):
         if self.lastLength >= self.freeLength:
             return '-'
         
@@ -226,15 +239,15 @@ class Spring():
         
         if life == L_10e5:
             if factor > 0:
-                return 10**(factor+1)
+                return (factor+1)
             else:
                 millDeflection = self.getMillionDefl()
                 currDeflection = self.freeLength - self.lastLength
-                return 10**(millDeflection/currDeflection)
+                return (millDeflection/currDeflection)
         
         if life == L_MILLION:
-            return 10**factor
-        return 10**(factor - 1)
+            return factor
+        return (factor - 1)
 
     def expectedLife(self, length):
         self.lastLength = length
@@ -254,16 +267,6 @@ class Spring():
     
     def __repr__(self):
         return 'Spring(' + self.name + ')'
-
-        
-
-with open(SPRING_FILE, 'r') as f:
-    for line in f:
-        temp = line.split(sep=' ')
-        if len(temp) == 21:            
-            springs.append(Spring(temp))
-        else:
-            print(temp)
 
 def getFourDeflections(spring, stroke, minF1, maxF1, minF2, maxF2):
     d1 = spring.getDeflection(minF1)    
@@ -285,8 +288,6 @@ def strokeFilter(inSprings, stroke, minF1, maxF1, minF2, maxF2):
         if minDeltaD < stroke and maxDeltaD > stroke:
             outSprings.append(s)
     return outSprings
-
-springDict = {s.name:s for s in springs}
 
 def rangeAttrFilter(lsprings, attr, minN, maxN):
     return [s for s in lsprings if minN <= s.__getattribute__(attr) <= maxN]
@@ -319,3 +320,28 @@ def lifeFilter(inSprings, minLife, *, length1=None, length2=None, stroke=None, f
         return [s for s in inSprings if s.expectedLife(minLength) >= lifeDict[minLife]]
     except Exception:
         return inSprings
+
+
+def compareLives(p1, p2):
+    # p1 and p2 are percent of deflection 
+    diffs = []
+    for spring in springs:
+        l1 = spring.freeLength - p1*spring.maxDeflection
+        l2 = spring.freeLength - p2*spring.maxDeflection
+        diffs.append((spring, spring.expectedLife(l2) - spring.getGoodmanLife(l1,l2)))
+    return diffs
+
+def loadSprings():
+    global springDict
+    with open(SPRING_FILE, 'r') as f:
+        for line in f:
+            temp = line.split(sep=' ')
+            if len(temp) == 21:            
+                springs.append(Spring(temp))
+            else:
+                print('Bad Spring Input:', temp)
+
+    springDict = {s.name:s for s in springs}
+
+if __name__ == '__main__':
+    loadSprings()
