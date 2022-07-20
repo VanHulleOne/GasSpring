@@ -6,3 +6,4 @@ build/springGUI/base_library.zip
 build/springGUI/PKG-00.pkg
 build/springGUI/PYZ-00.pyz
 build/springGUI/springGUI.exe.manifest
+dist/springGUI.exe
